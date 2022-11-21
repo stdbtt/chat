@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Чат</title>
+</head>
+<body>
+<table>
+    <tr>
+        <td>
+            <div id="messages" style="height: 350px; width: 400px; overflow-x: auto; border:1px solid black;" >
+                <div th:each="message : ${messages}"  >
+                    <span th:text="${message.getParticipantDTO().getNickname() + ': ' + message.getText()}"></span>
+                    <br/>
+                </div>
+            </div>
+        </td>
+        <td>
+            <div id="participants" style="height: 350px; width: 200px; overflow-y: auto; border:1px solid black;" >
+            </div>
+        </td>
+    </tr>
+</table>
+
+<form id="send_message" >
+    <label for="new_message">Введите сообщение:</label>
+    <input type="text" id="new_message" name="new_message"/>
+    <input type="submit"  value="Отправить"/>
+</form>
+<form th:method="POST" th:action="@{/leftChat}" >
+    <input type="submit" value="Покинуть чат"/>
+</form>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script>
+
+    //start recursive poll for new messages after page load
+    $(document).ready(
+        function getNewMessagesWithTimeout(){
+        getNewMessages();
+        setTimeout(getNewMessagesWithTimeout, 2000);
+    });
+
+    //set scroll in bottom position for show last messages
+    var chat = document.getElementById("messages");
+    chat.scrollTop = chat.scrollHeight;
+
+    var isTabActive = true;
+    window.onfocus = function () {
+        isTabActive = true;
+    };
+
+    window.onblur = function () {
+        isTabActive = false;
+    };
+
+    function getNewMessages() {
+        $.ajax({
+            type: "GET",
+            url: "[[@{/getNewMessages}]]",
+            dataType: "JSON",
+            success: function (data) {
+
+                //create html code with messages that we got from server
+                var html = "";
+                $(data).each(function (index, value) {
+                    html += '<span>' + value.participantDTO.nickname + ': ' + value.text + '</span><br/>'
+                })
+                $("#messages").append(html);
+
+                //check if got not empty json then show alert(if tab is inactive) and scroll chat to new messages
+                if(Object.keys(data).length !== 0){
+                    if(!isTabActive){
+                        alert("У вас есть новые сообщения");
+                    }
+                    chat.scrollTop = chat.scrollHeight;
+                }
+            }
+        });
+    }
+
+    $("#send_message").on('submit', function (e) {
+        e.preventDefault();
+        var data = {
+            "text" : document.getElementById("new_message").value,
+            "participantDTO" : null
+        };
+        $.ajax({
+            type: "POST",
+            url: "[[@{/chat}]]",
+            data: JSON.stringify(data),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function () {
+                document.getElementById("send_message").reset();
+
+                //send request immediately without timeout for show own message
+                getNewMessages();
+            }
+        });
+    });
+
+    //start recursive poll for online participants after page load
+    $(document).ready(
+        function updateParticipants(){
+            getOnlineParticipants();
+            setTimeout(updateParticipants, 5000);
+        });
+
+    function getOnlineParticipants() {
+        $.ajax({
+            type: "GET",
+            url: "[[@{/getOnlineParticipants}]]",
+            dataType: "JSON",
+            success: function (data) {
+                document.getElementById("participants").replaceChildren("");
+                var html = "<b><span>Участники:</span></b><br/>";
+                $(data).each(function (index, value) {
+                    html += '<span>' + value.nickname + '</span><br/>'
+                })
+                $("#participants").append(html);
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

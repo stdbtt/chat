@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход</title>
+</head>
+<body>
+    <form th:method="POST" th:action="@{/login}" th:object="${participant}">
+        <label for="nickname">Выберите ник:</label>
+        <input type="text" th:field="*{nickname}" id="nickname"/>
+        <div style="color:red" th:if="${#fields.hasErrors('nickname')}" th:errors="*{nickname}"></div>
+        <br/>
+        <input type="submit" value="Выбрать"/>
+    </form>
+</body>
+</html>
